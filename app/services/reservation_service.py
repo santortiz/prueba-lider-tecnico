@@ -14,11 +14,13 @@ def create_automatic_reservation(db: Session, reservation: ReservationCreate):
 
     table_id = reservation.table_id
 
-    if not table_id:
+    if not table_id and guests <= 6:
         table = find_best_table(db, date, time, guests)
         if not table:
             raise ValueError("No available table for that time and number of guests")
         table_id = table.id
+    elif not table_id:
+        raise ValueError("Table ID must be provided for reservations with more than 6 guests")
 
     # Verifica conflicto
     existing = db.query(Reservation).filter(
