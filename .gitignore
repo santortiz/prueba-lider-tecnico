@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.log
+*.sqlite3
+*.db
+
+# Entorno virtual
+.venv/
+env/
+venv/
+ENV/
+
+# Archivos del editor
+.vscode/
+.idea/
+*.swp
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Pruebas / cobertura
+htmlcov/
+.tox/
+.nox/
+.coverage
+coverage.xml
+*.cover
+.pytest_cache/
+.cache/
+
+# Archivos generados
+dist/
+build/
+*.egg-info/
+*.bak
+
+# Otros
+.env
+.env.*
