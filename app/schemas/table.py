@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 class TableBase(BaseModel):
-    room: str
+    room_id: int
     capacity: int
     status: str = "free"
 
@@ -12,5 +12,4 @@ class TableOut(TableBase):
     id: int
 
     class Config:
-        from_attributes = True
-    
+        orm_mode = True
