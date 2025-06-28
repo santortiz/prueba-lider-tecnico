@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     FROM_EMAIL: str
     SENDGRID_API_KEY: str
     TEMPLATE_ID: str
+    JWT_SECRET: str
 
     class Config:
         env_file = ".env"
