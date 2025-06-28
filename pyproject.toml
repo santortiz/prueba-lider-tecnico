@@ -9,6 +9,7 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
+    "sendgrid>=6.12.4",
     "sqlalchemy>=2.0.41",
     "uvicorn[standard]>=0.34.3",
 ]

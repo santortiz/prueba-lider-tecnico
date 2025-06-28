@@ -8,6 +8,7 @@ class ReservationBase(BaseModel):
     guests: int
     status: str = "reserved"
     notes: str | None = None
+    notification_email: str
 
 class ReservationCreate(ReservationBase):
     pass

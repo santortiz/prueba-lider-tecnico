@@ -3,6 +3,7 @@ from sqlalchemy import and_
 from app.models.reservation import Reservation
 from app.models.table import Table
 from app.schemas.reservation import ReservationCreate
+from app.utils.email import send_email
 
 def create_reservation(db: Session, reservation: ReservationCreate):
     # Verificar que la mesa exista
@@ -28,6 +29,12 @@ def create_reservation(db: Session, reservation: ReservationCreate):
     db.add(db_reservation)
     db.commit()
     db.refresh(db_reservation)
+
+
+    # Enviar email si hay dirección
+    if db_reservation.notification_email:
+        send_email(to_email=db_reservation.notification_email)
+
     return db_reservation
 
 def get_reservations(db: Session):

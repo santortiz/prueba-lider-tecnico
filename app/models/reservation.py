@@ -12,5 +12,6 @@ class Reservation(Base):
     guests = Column(Integer, nullable=False)
     status = Column(String, default="reserved")  # reserved, occupied, finished
     notes = Column(String, nullable=True)
+    notification_email = Column(String, nullable=False)
 
     table = relationship("Table", backref="reservations")

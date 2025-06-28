@@ -6,6 +6,9 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     DATABASE_URL: str
+    FROM_EMAIL: str
+    SENDGRID_API_KEY: str
+    TEMPLATE_ID: str
 
     class Config:
         env_file = ".env"
