@@ -37,3 +37,17 @@ def delete_table(table_id: int, db: Session = Depends(get_db)):
     if not table:
         raise HTTPException(status_code=404, detail="Table not found")
     return table
+
+@router.post("/{table_id}/occupy", response_model=TableOut)
+def occupy_table(table_id: int, db: Session = Depends(get_db)):
+    try:
+        return table_service.mark_table_as_occupied(db, table_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/{table_id}/free", response_model=TableOut)
+def free_table(table_id: int, db: Session = Depends(get_db)):
+    try:
+        return table_service.mark_table_as_free(db, table_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

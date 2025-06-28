@@ -37,3 +37,18 @@ def delete_reservation(reservation_id: int, db: Session = Depends(get_db)):
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservation not found")
     return reservation
+
+
+@router.post("/{reservation_id}/arrive", response_model=ReservationOut)
+def arrive_reservation(reservation_id: int, db: Session = Depends(get_db)):
+    try:
+        return reservation_service.mark_as_occupied(db, reservation_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.post("/{reservation_id}/finish", response_model=ReservationOut)
+def finish_reservation(reservation_id: int, db: Session = Depends(get_db)):
+    try:
+        return reservation_service.mark_as_finished(db, reservation_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
