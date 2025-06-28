@@ -1,14 +1,15 @@
 from pydantic import BaseModel, field_validator
 from datetime import date, time
+from typing import Optional
 
 class ReservationBase(BaseModel):
-    table_id: int
+    table_id: Optional[int] = None
     date: date
     time: time
     guests: int
     status: str = "reserved"
     notes: str | None = None
-    notification_email: str
+    notification_email: str | None = None
 
 class ReservationCreate(ReservationBase):
     pass

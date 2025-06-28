@@ -6,6 +6,8 @@ from app.schemas.table import TableCreate
 
 from datetime import datetime, time
 from sqlalchemy import and_
+from collections import defaultdict
+from app.models.room import Room
 
 
 def create_table(db: Session, table: TableCreate):
@@ -69,3 +71,62 @@ def mark_table_as_free(db: Session, table_id: int):
     db.commit()
     db.refresh(table)
     return table
+
+
+def find_best_table(db: Session, date, hour: time, guests: int) -> Table | None:
+    """
+    Retorna la mejor mesa disponible para los parámetros dados.
+    """
+
+    # Mesas con suficiente capacidad
+    candidate_tables = db.query(Table).filter(
+        Table.capacity >= guests,
+        Table.status == "free"
+    ).order_by(Table.capacity.asc()).all()
+
+    for table in candidate_tables:
+        # Verificar que no tenga una reserva activa en esa fecha y hora
+        conflict = db.query(Reservation).filter(
+            and_(
+                Reservation.table_id == table.id,
+                Reservation.date == date,
+                Reservation.time == hour,
+                Reservation.status.in_(["reserved", "occupied"])
+            )
+        ).first()
+        if not conflict:
+            return table  # primera mesa apta
+
+    return None
+
+def get_available_tables_by_room(db: Session, date, hour: time, guests: int):
+    """
+    Retorna un dict con salones y sus mesas disponibles para una fecha, hora y número de invitados.
+    """
+    available = defaultdict(list)
+
+    rooms = db.query(Room).all()
+    for room in rooms:
+        # mesas con suficiente capacidad y libres
+        tables = db.query(Table).filter(
+            Table.room_id == room.id,
+            Table.capacity >= guests,
+            Table.status == "free"
+        ).all()
+
+        for table in tables:
+            conflict = db.query(Reservation).filter(
+                and_(
+                    Reservation.table_id == table.id,
+                    Reservation.date == date,
+                    Reservation.time == hour,
+                    Reservation.status.in_(["reserved", "occupied"])
+                )
+            ).first()
+            if not conflict:
+                available[room.name].append({
+                    "table_id": table.id,
+                    "capacity": table.capacity
+                })
+
+    return available

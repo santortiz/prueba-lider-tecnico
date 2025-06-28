@@ -17,7 +17,7 @@ def get_db():
 @router.post("/", response_model=ReservationOut, dependencies=[Depends(require_role("admin"))])
 def create_reservation(reservation: ReservationCreate, db: Session = Depends(get_db)):
     try:
-        return reservation_service.create_reservation(db, reservation)
+        return reservation_service.create_automatic_reservation(db, reservation)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
