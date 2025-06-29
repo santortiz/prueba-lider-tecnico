@@ -205,3 +205,77 @@ docker compose down
 
 - Proyecto modular con separación clara por capas.
 - Facilita mantenimiento, pruebas y escalabilidad.
+
+## 🧠 Asignación Óptima de Mesas
+
+El sistema incorpora un modelo de optimización matemática para asignar automáticamente reservas a mesas disponibles de forma eficiente. Esto es especialmente útil cuando múltiples reservas se registran sin una mesa específica y se desea maximizar la ocupación del restaurante minimizando desperdicio de espacio.
+
+### 🎯 Objetivo
+
+Asignar reservas del `pool` a las mesas disponibles de tal manera que:
+
+- Cada reserva se asigna a una única mesa.
+- Cada mesa se usa como máximo una vez.
+- Solo se usan mesas cuya capacidad sea suficiente para los comensales de la reserva.
+- **Se minimiza la cantidad total de sillas sin ocupar.**
+
+### 🧮 Formulación matemática
+
+El problema se modela como un **programa lineal entero**:
+
+- \( x_{ij} = 1 \) si la reserva \( i \) es asignada a la mesa \( j \), 0 en otro caso.
+- \( c_j \): capacidad de la mesa \( j \)
+- \( g_i \): número de invitados en la reserva \( i \)
+
+**Función objetivo:**
+
+\[
+\min \sum_{i,j} x_{ij} (c_j - g_i)
+\]
+
+**Restricciones:**
+
+- Cada reserva se asigna a una única mesa:
+  \[
+  \sum_j x_{ij} = 1 \quad \forall i
+  \]
+- Cada mesa se asigna como máximo a una reserva:
+  \[
+  \sum_i x_{ij} \leq 1 \quad \forall j
+  \]
+- No se pueden asignar reservas a mesas con capacidad insuficiente:
+  \[
+  x_{ij} = 0 \quad \text{si } g_i > c_j
+  \]
+
+### ⚙️ Implementación
+
+- El modelo está implementado en `app/utils/optimizer.py` utilizando `pulp`, una librería de optimización en Python.
+- Se expone mediante el endpoint:
+
+  ```
+  POST /optimize?date=YYYY-MM-DD&time=HH:MM
+  ```
+
+- Este endpoint:
+  - Consulta las reservas del `pool` para esa fecha y hora.
+  - Consulta las mesas libres.
+  - Ejecuta el modelo de optimización.
+  - Crea las reservas reales en la base de datos para las asignaciones exitosas.
+  - Las reservas que no puedan ser asignadas (por conflicto u otra razón) se conservan en el `pool`.
+
+### 📤 Ejemplo de respuesta
+
+```json
+{
+  "assigned": [
+    { "reservation_id": 1, "table_id": 12, "guests": 4, "capacity": 4 },
+    { "reservation_id": 2, "table_id": 14, "guests": 2, "capacity": 2 }
+  ],
+  "unassigned": [
+    { "reservation_id": 3, "table_id": 10, "guests": 6, "capacity": 6 }
+  ]
+}
+```
+
+Este enfoque mejora la eficiencia del restaurante al evitar dejar sillas vacías innecesariamente.
