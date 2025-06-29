@@ -7,6 +7,35 @@ from app.services.table_service import find_best_table
 
 
 def create_automatic_reservation(db: Session, reservation: ReservationCreate):
+    """
+    Creates an automatic reservation for a table in the database.
+
+    Parameters
+    ----------
+    db : Session
+        The database session used to interact with the database.
+    reservation : ReservationCreate
+        The reservation details, including guests, date, time, table ID, and other optional fields.
+
+    Returns
+    -------
+    Reservation
+        The created reservation object.
+
+    Raises
+    ------
+    ValueError
+        If no table is available for the specified time and number of guests.
+        If the table ID is not provided for reservations with more than 6 guests.
+        If the table is already reserved at the specified date and time.
+
+    Notes
+    -----
+    - If the `table_id` is not provided and the number of guests is less than or equal to 6, 
+      the function attempts to find the best available table.
+    - If a notification email is provided in the reservation details, a confirmation email 
+      will be sent after the reservation is created.
+    """
     # Redondear la hora ya fue hecho en el schema
     guests = reservation.guests
     date = reservation.date

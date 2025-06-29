@@ -2,6 +2,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from app.seed import seed_data
 
 from app.routers.router import router
 from app.database import create_tables_if_not_exist
@@ -11,6 +12,7 @@ def lifespan():
     async def lifespan_context(app: FastAPI):
         # Crear tablas automáticamente si no existen
         create_tables_if_not_exist()
+        seed_data()
 
         # Mensaje de inicio
         port = int(os.environ.get("PORT", 8000))
