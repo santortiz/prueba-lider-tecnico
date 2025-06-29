@@ -224,40 +224,38 @@ Asignar reservas del `pool` a las mesas disponibles de tal manera que:
 Dado un conjunto de **reservas pendientes** y un conjunto de **mesas disponibles**, el sistema ejecuta un modelo de optimización que **asigna mesas minimizando la cantidad de sillas vacías y penalizando las reservas sin asignar**.
 
 #### Conjuntos y parámetros
-
-- \( R = \{r_1, r_2, \ldots, r_n\} \): Reservas, donde cada \( r_i \) tiene \( g_i \) comensales.
-- \( T = \{t_1, t_2, \ldots, t_m\} \): Mesas, donde cada \( t_j \) tiene capacidad \( c_j \).
-- \( x_{ij} \in \{0, 1\} \): Variable binaria, 1 si la reserva \( r_i \) se asigna a la mesa \( t_j \).
-- \( y_i \in \{0, 1\} \): Variable binaria, 1 si la reserva \( r_i \) fue asignada a alguna mesa.
-- \( \lambda \): Penalización por cada reserva no asignada.
+- $ R = \{r_1, r_2, \ldots, r_n\} $: Reservas, donde cada $r_i$ tiene $g_i$ comensales.
+- $T = \{t_1, t_2, \ldots, t_m\}$: Mesas, donde cada $t_j$ tiene capacidad $c_j$.
+- $x_{ij} \in \{0, 1\}$: Variable binaria, 1 si la reserva $r_i$ se asigna a la mesa $t_j$.
+- $y_i \in \{0, 1\}$: Variable binaria, 1 si la reserva $r_i$ fue asignada a alguna mesa.
+- $\lambda$: Penalización por cada reserva no asignada.
 
 #### Objetivo
 
 Minimizar:
-
-\[
+$$
 \sum_{i=1}^{n} \sum_{j=1}^{m} x_{ij} \cdot (c_j - g_i) + \lambda \cdot \sum_{i=1}^{n} (1 - y_i)
-\]
+$$
 
 #### Restricciones
 
 1. **Relación entre variables**: una reserva se marca como asignada si está asociada a alguna mesa
 
-\[
+$$
 \sum_{j=1}^{m} x_{ij} = y_i \quad \forall i \in R
-\]
+$$
 
 2. **Una mesa se asigna a lo sumo a una reserva**:
 
-\[
+$$
 \sum_{i=1}^{n} x_{ij} \leq 1 \quad \forall j \in T
-\]
+$$
 
 3. **Solo pueden asignarse mesas con capacidad suficiente**:
 
-\[
+$$
 x_{ij} = 0 \quad \text{si } g_i > c_j
-\]
+$$
 
 ---
 
