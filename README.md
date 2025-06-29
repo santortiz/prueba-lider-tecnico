@@ -217,36 +217,51 @@ Asignar reservas del `pool` a las mesas disponibles de tal manera que:
 - Cada reserva se asigna a una única mesa.
 - Cada mesa se usa como máximo una vez.
 - Solo se usan mesas cuya capacidad sea suficiente para los comensales de la reserva.
-- **Se minimiza la cantidad total de sillas sin ocupar.**
+- **Se minimiza la cantidad total de sillas sin ocupar y la cantidad de reservas sin asignar**
 
-### 🧮 Formulación matemática
+### 📊 Formulación del modelo de optimización
 
-El problema se modela como un **programa lineal entero**:
+Dado un conjunto de **reservas pendientes** y un conjunto de **mesas disponibles**, el sistema ejecuta un modelo de optimización que **asigna mesas minimizando la cantidad de sillas vacías y penalizando las reservas sin asignar**.
 
-- \( x_{ij} = 1 \) si la reserva \( i \) es asignada a la mesa \( j \), 0 en otro caso.
-- \( c_j \): capacidad de la mesa \( j \)
-- \( g_i \): número de invitados en la reserva \( i \)
+#### Conjuntos y parámetros
 
-**Función objetivo:**
+- \( R = \{r_1, r_2, \ldots, r_n\} \): Reservas, donde cada \( r_i \) tiene \( g_i \) comensales.
+- \( T = \{t_1, t_2, \ldots, t_m\} \): Mesas, donde cada \( t_j \) tiene capacidad \( c_j \).
+- \( x_{ij} \in \{0, 1\} \): Variable binaria, 1 si la reserva \( r_i \) se asigna a la mesa \( t_j \).
+- \( y_i \in \{0, 1\} \): Variable binaria, 1 si la reserva \( r_i \) fue asignada a alguna mesa.
+- \( \lambda \): Penalización por cada reserva no asignada.
+
+#### Objetivo
+
+Minimizar:
 
 \[
-\min \sum_{i,j} x_{ij} (c_j - g_i)
+\sum_{i=1}^{n} \sum_{j=1}^{m} x_{ij} \cdot (c_j - g_i) + \lambda \cdot \sum_{i=1}^{n} (1 - y_i)
 \]
 
-**Restricciones:**
+#### Restricciones
 
-- Cada reserva se asigna a una única mesa:
-  \[
-  \sum_j x_{ij} = 1 \quad \forall i
-  \]
-- Cada mesa se asigna como máximo a una reserva:
-  \[
-  \sum_i x_{ij} \leq 1 \quad \forall j
-  \]
-- No se pueden asignar reservas a mesas con capacidad insuficiente:
-  \[
-  x_{ij} = 0 \quad \text{si } g_i > c_j
-  \]
+1. **Relación entre variables**: una reserva se marca como asignada si está asociada a alguna mesa
+
+\[
+\sum_{j=1}^{m} x_{ij} = y_i \quad \forall i \in R
+\]
+
+2. **Una mesa se asigna a lo sumo a una reserva**:
+
+\[
+\sum_{i=1}^{n} x_{ij} \leq 1 \quad \forall j \in T
+\]
+
+3. **Solo pueden asignarse mesas con capacidad suficiente**:
+
+\[
+x_{ij} = 0 \quad \text{si } g_i > c_j
+\]
+
+---
+
+Este modelo permite encontrar una solución eficiente, asignando mesas de forma óptima incluso si algunas reservas no pueden ser satisfechas debido a limitaciones de capacidad o disponibilidad.
 
 ### ⚙️ Implementación
 
@@ -259,7 +274,7 @@ El problema se modela como un **programa lineal entero**:
 
 - Este endpoint:
   - Consulta las reservas del `pool` para esa fecha y hora.
-  - Consulta las mesas libres.
+  - Consulta las mesas libres (es decir, que no tienen reservaciones asignadas).
   - Ejecuta el modelo de optimización.
   - Crea las reservas reales en la base de datos para las asignaciones exitosas.
   - Las reservas que no puedan ser asignadas (por conflicto u otra razón) se conservan en el `pool`.
