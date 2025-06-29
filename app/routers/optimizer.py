@@ -27,16 +27,16 @@ def assign_reservations_optimally(
     reservations = reservation_pool_service.get_by_date_and_time(db, date, time)
     tables = table_service.get_tables(db)
 
-    # Filtrar mesas libres y sin conflicto
-    available_tables = [
-        t for t in tables
-        if t.status == "free" and not any(
-            r.date == date and r.time == time and r.table_id == t.id
-            for r in t.reservations
-        )
-    ]
+    # 🔄 NUEVO: mesas que no tienen reservas activas en ese momento
+    reserved_table_ids = {
+        r.table_id
+        for t in tables
+        for r in t.reservations
+        if r.date == date and r.time == time and r.status in {"reserved", "occupied"}
+    }
 
-    # Entradas para el modelo
+    available_tables = [t for t in tables if t.id not in reserved_table_ids]
+
     res_data = [(r.id, r.guests) for r in reservations]
     tab_data = [(t.id, t.capacity) for t in available_tables]
 
@@ -66,7 +66,7 @@ def assign_reservations_optimally(
             print(f"❌ No se pudo asignar reserva {a['reservation_id']} a mesa {a['table_id']}: {e}")
             failed.append(a["reservation_id"])
 
-    # Eliminar solo las reservas exitosamente asignadas del pool
+    # Eliminar solo las exitosas
     for r_id in successful:
         db.query(reservation_pool_service.ReservationPool).filter_by(id=r_id).delete()
     db.commit()
