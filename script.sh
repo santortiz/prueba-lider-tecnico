@@ -9,8 +9,8 @@ OUTPUT_FILE="scripts_dump.txt"
 # Limpia el archivo si ya existe
 > "$OUTPUT_FILE"
 
-# Encuentra todos los archivos .py y procesa cada uno
-find "$ROOT_DIR" -type f -name "*.py" | while read -r filepath; do
+# Encuentra todos los archivos .py excluyendo el directorio .venv
+find "$ROOT_DIR" -type f -name "*.py" ! -path "$ROOT_DIR/.venv/*" | while read -r filepath; do
   echo "$filepath" >> "$OUTPUT_FILE"
   echo "" >> "$OUTPUT_FILE"
   cat "$filepath" >> "$OUTPUT_FILE"
