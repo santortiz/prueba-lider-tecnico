@@ -1,18 +1,26 @@
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
-from app.services import staff_service, room_service, table_service, reservation_service
+from app.services import (
+    staff_service,
+    room_service,
+    table_service,
+    reservation_service,
+)
 from app.schemas.staff import StaffCreate
 from app.schemas.room import RoomCreate
 from app.schemas.table import TableCreate
 from app.schemas.reservation import ReservationCreate
 from datetime import date, time
 
-
+# NUEVO
+from app.models.reservation_pool import ReservationPool
 
 def seed_data():
     db: Session = SessionLocal()
     try:
-        # Seed staff
+        # =======================
+        # Staff
+        # =======================
         if not staff_service.get_staff_by_email(db, "admin@resto.com"):
             staff_service.create_staff(db, StaffCreate(
                 full_name="Admin User",
@@ -29,7 +37,9 @@ def seed_data():
                 password="waiter123"
             ))
 
-        # Seed rooms
+        # =======================
+        # Rooms
+        # =======================
         room_names = ["Interior", "Terraza"]
         room_ids = {}
 
@@ -39,7 +49,9 @@ def seed_data():
                 room = room_service.create_room(db, RoomCreate(name=name, description=f"Salón {name}"))
             room_ids[name] = room.id
 
-        # Seed tables
+        # =======================
+        # Tables
+        # =======================
         predefined_tables = [
             {"room": "Interior", "capacity": 2},
             {"room": "Interior", "capacity": 4},
@@ -60,20 +72,55 @@ def seed_data():
                     status="free"
                 ))
 
-        # Seed reservation (opcional)
+        # =======================
+        # Reserva asignada de ejemplo
+        # =======================
         today = date.today()
         reservation_time = time(hour=19, minute=0)
 
-        reservation_service.create_automatic_reservation(db, ReservationCreate(
-            date=today,
-            time=reservation_time,
-            guests=2,
-            notes="Reserva demo",
-            notification_email="cliente@demo.com"
-        ))
+        try:
+            reservation_service.create_automatic_reservation(db, ReservationCreate(
+                date=today,
+                time=time(hour=19, minute=0),
+                guests=2,
+                notes="Reserva demo",
+                notification_email="cliente@demo.com"
+            ))
+        except Exception:
+            pass  # Por si ya está creada
 
-        print("✅ Seed data inserted")
+        # =======================
+        # POOL: Reservas sin asignar para optimización
+        # =======================
+        db.query(ReservationPool).delete()
 
+        perfect_pool = [
+            (2, None),
+            (2, None),
+            (4, None),
+            (4, None),
+            (6, None),
+            (8, None),
+            (10, None),
+            (10, None),
+        ]
+
+        pool_reservations = [
+            ReservationPool(
+                date=today,
+                time=reservation_time,
+                guests=guests,
+                notes=f"Reserva óptima {guests}",
+                notification_email=email
+            )
+            for guests, email in perfect_pool
+        ]
+
+        db.add_all(pool_reservations)
+        db.commit()
+
+
+        print("✅ Seed data inserted (reservations + pool)")
     except Exception as e:
         print(f"❌ Error seeding data: {e}")
     finally:
