@@ -14,7 +14,7 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/", response_model=ReservationOut, dependencies=[Depends(require_role("admin"))])
+@router.post("/", response_model=ReservationOut, dependencies=[Depends(get_current_user)])
 def create_reservation(reservation: ReservationCreate, db: Session = Depends(get_db)):
     try:
         return reservation_service.create_automatic_reservation(db, reservation)
