@@ -205,3 +205,229 @@ docker compose down
 
 - Proyecto modular con separación clara por capas.
 - Facilita mantenimiento, pruebas y escalabilidad.
+
+## 🧠 Asignación Óptima de Mesas
+
+El sistema incorpora un modelo de optimización matemática para asignar automáticamente reservas a mesas disponibles de forma eficiente. Esto es especialmente útil cuando múltiples reservas se registran sin una mesa específica y se desea maximizar la ocupación del restaurante minimizando desperdicio de espacio.
+
+### 🎯 Objetivo
+
+Asignar reservas del `pool` a las mesas disponibles de tal manera que:
+
+- Cada reserva se asigna a una única mesa.
+- Cada mesa se usa como máximo una vez.
+- Solo se usan mesas cuya capacidad sea suficiente para los comensales de la reserva.
+- **Se minimiza la cantidad total de sillas sin ocupar y la cantidad de reservas sin asignar**
+
+### 📊 Formulación del modelo de optimización
+
+Dado un conjunto de **reservas pendientes** y un conjunto de **mesas disponibles**, el sistema ejecuta un modelo de optimización que **asigna mesas minimizando la cantidad de sillas vacías y penalizando las reservas sin asignar**.
+
+#### Conjuntos y parámetros
+
+- $ R = \{r_1, r_2, \ldots, r_n\} $: Reservas, donde cada $r_i$ tiene $g_i$ comensales.
+- $T = \{t_1, t_2, \ldots, t_m\}$: Mesas, donde cada $t_j$ tiene capacidad $c_j$.
+- $x_{ij} \in \{0, 1\}$: Variable binaria, 1 si la reserva $r_i$ se asigna a la mesa $t_j$.
+- $y_i \in \{0, 1\}$: Variable binaria, 1 si la reserva $r_i$ fue asignada a alguna mesa.
+- $\lambda$: Penalización por cada reserva no asignada.
+
+#### Objetivo
+
+Minimizar:
+
+$$
+\sum_{i=1}^{n} \sum_{j=1}^{m} x_{ij} \cdot (c_j - g_i) + \lambda \cdot \sum_{i=1}^{n} (1 - y_i)
+$$
+
+#### Restricciones
+
+1. **Relación entre variables**: una reserva se marca como asignada si está asociada a alguna mesa
+
+$$
+\sum_{j=1}^{m} x_{ij} = y_i \quad \forall i \in R
+$$
+
+2. **Una mesa se asigna a lo sumo a una reserva**:
+
+$$
+\sum_{i=1}^{n} x_{ij} \leq 1 \quad \forall j \in T
+$$
+
+3. **Solo pueden asignarse mesas con capacidad suficiente**:
+
+$$
+x_{ij} = 0 \quad \text{si } g_i > c_j
+$$
+
+---
+
+Este modelo permite encontrar una solución eficiente, asignando mesas de forma óptima incluso si algunas reservas no pueden ser satisfechas debido a limitaciones de capacidad o disponibilidad.
+
+### ⚙️ Implementación
+
+- El modelo está implementado en `app/utils/optimizer.py` utilizando `pulp`, una librería de optimización en Python.
+- Se expone mediante el endpoint:
+
+  ```
+  POST /optimize?date=YYYY-MM-DD&time=HH:MM
+  ```
+- Este endpoint:
+
+  - Consulta las reservas del `pool` para esa fecha y hora.
+  - Consulta las mesas libres (es decir, que no tienen reservaciones asignadas).
+  - Ejecuta el modelo de optimización.
+  - Crea las reservas reales en la base de datos para las asignaciones exitosas.
+  - Las reservas que no puedan ser asignadas (por conflicto u otra razón) se conservan en el `pool`.
+
+### 📤 Ejemplo de respuesta
+
+```json
+{
+  "assigned": [
+    { "reservation_id": 1, "table_id": 12, "guests": 4, "capacity": 4 },
+    { "reservation_id": 2, "table_id": 14, "guests": 2, "capacity": 2 }
+  ],
+  "unassigned": [
+    { "reservation_id": 3, "table_id": 10, "guests": 6, "capacity": 6 }
+  ]
+}
+```
+
+Este enfoque mejora la eficiencia del restaurante al evitar dejar sillas vacías innecesariamente.
+
+# 📖 Guía de Consumo de API – Sistema de Reservas Inteligente
+
+Este documento explica cómo interactuar con el backend del sistema de reservas para restaurante. Cubre el ciclo de vida de una reserva, la gestión de clientes sin reserva (walk-ins), y el uso del modelo de optimización. Al correr el docker, automáticamente se correa una seed que pobla las tablas con información base que permita desarrollar los flujos sin necesidad de crear rooms, mesas o staff manualmente (que bien puede hacerse consumiendo los endpoints correspondientes).
+
+---
+
+## 🧾 1. Ciclo de Vida de una Reserva
+
+### 🔐 Autenticación
+
+**POST** `/auth/login`**form-data:**
+
+- `username`: *waiter@resto.com* | *admin@resto.com*
+- `password`: *waiter123 | admin123*
+
+**Respuesta:**
+
+```json
+{ "access_token": "JWT_TOKEN", "token_type": "bearer" }
+```
+
+---
+
+### 📅 Crear una reserva
+
+**POST** `/reservations/`
+**Headers:** `Authorization: Bearer <JWT_TOKEN>`
+
+#### Para ≤ 6 invitados:
+
+```json
+{
+  "date": "2025-07-01",
+  "time": "19:45",
+  "guests": 4,
+  "notification_email": "cliente@ejemplo.com",
+  "notes": "Mesa cerca de la ventana"
+}
+```
+
+#### Para > 6 invitados:
+
+1. Consultar disponibilidad:
+   **GET** `/tables/available-by-room?date=2025-07-01&time=19:00&guests=8`
+2. Usar `table_id` devuelto:
+
+```json
+{
+  "table_id": 6,
+  "date": "2025-07-01",
+  "time": "19:15",
+  "guests": 8,
+  "notification_email": "cliente@ejemplo.com"
+}
+```
+
+---
+
+### 📋 Listar reservas
+
+**GET** `/reservations/`
+**Header:** `Authorization: Bearer JWT_TOKEN`
+
+---
+
+## 🧍 2. Walk-in (Cliente sin reserva)
+
+### Ocupar una mesa manualmente
+
+**POST** `/tables/{table_id}/occupy`
+**Header:** `Authorization: Bearer JWT_TOKEN`
+
+### Liberar una mesa
+
+**POST** `/tables/{table_id}/free`
+
+---
+
+## 🔁 3. Gestión de Reserva
+
+### Llegada del cliente
+
+**POST** `/reservations/{reservation_id}/arrive`
+
+### Finalizar reserva
+
+**POST** `/reservations/{reservation_id}/finish`
+
+---
+
+## 🤖 4. Optimización de Reservas
+
+### Añadir reserva al pool
+
+**POST** `/reservation-pool/`
+
+```json
+{
+  "date": "2025-06-29", //(el ejemplo seed utiliza la fecha de ejecución del back. Entonces, si se corre hoy, se debe poner la fecha de hoy YYYY-MM-DD)
+  "time": "19:00",
+  "guests": 10,
+  "notification_email": "grupo1@resto.com"
+}
+```
+
+### Ejecutar asignación inteligente
+
+**POST** `/optimize/?date=2025-07-01&time=19:00`
+
+**Respuesta:**
+
+```json
+{
+  "assigned": [
+    { "reservation_id": 18, "table_id": 6, "guests": 4, "capacity": 4 }
+  ],
+  "unassigned": [
+    { "reservation_id": 19, "table_id": null, "guests": 10, "capacity": null }
+  ]
+}
+```
+
+---
+
+## 🧭 Estado actual de mesas
+
+**GET** `/tables/`
+**Header:** `Authorization: Bearer JWT_TOKEN`
+
+---
+
+## 📬 Notificación por correo
+
+Si una reserva contiene el campo `notification_email`, el sistema envía una confirmación a través de SendGrid.
+
+---

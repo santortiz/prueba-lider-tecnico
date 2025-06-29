@@ -6,7 +6,9 @@ from app.routers import (
     room,
     reservation,
     staff,
-    auth
+    auth,
+    optimizer,
+    reservation_pool
 )
 
 router = APIRouter()
@@ -17,3 +19,5 @@ router.include_router(room.router, prefix="/rooms", tags=["Rooms"])
 router.include_router(reservation.router, prefix="/reservations", tags=["Reservations"])
 router.include_router(staff.router, prefix="/staff", tags=["Staff"])
 router.include_router(auth.router, prefix="/auth", tags=["Auth"])
+router.include_router(optimizer.router, prefix="/optimizer", tags=["Optimizer"])
+router.include_router(reservation_pool.router, prefix="/reservation-pool", tags=["Reservation Pool"])
