@@ -224,6 +224,7 @@ Asignar reservas del `pool` a las mesas disponibles de tal manera que:
 Dado un conjunto de **reservas pendientes** y un conjunto de **mesas disponibles**, el sistema ejecuta un modelo de optimización que **asigna mesas minimizando la cantidad de sillas vacías y penalizando las reservas sin asignar**.
 
 #### Conjuntos y parámetros
+
 - $ R = \{r_1, r_2, \ldots, r_n\} $: Reservas, donde cada $r_i$ tiene $g_i$ comensales.
 - $T = \{t_1, t_2, \ldots, t_m\}$: Mesas, donde cada $t_j$ tiene capacidad $c_j$.
 - $x_{ij} \in \{0, 1\}$: Variable binaria, 1 si la reserva $r_i$ se asigna a la mesa $t_j$.
@@ -233,6 +234,7 @@ Dado un conjunto de **reservas pendientes** y un conjunto de **mesas disponibles
 #### Objetivo
 
 Minimizar:
+
 $$
 \sum_{i=1}^{n} \sum_{j=1}^{m} x_{ij} \cdot (c_j - g_i) + \lambda \cdot \sum_{i=1}^{n} (1 - y_i)
 $$
@@ -269,8 +271,8 @@ Este modelo permite encontrar una solución eficiente, asignando mesas de forma 
   ```
   POST /optimize?date=YYYY-MM-DD&time=HH:MM
   ```
-
 - Este endpoint:
+
   - Consulta las reservas del `pool` para esa fecha y hora.
   - Consulta las mesas libres (es decir, que no tienen reservaciones asignadas).
   - Ejecuta el modelo de optimización.
@@ -292,3 +294,140 @@ Este modelo permite encontrar una solución eficiente, asignando mesas de forma 
 ```
 
 Este enfoque mejora la eficiencia del restaurante al evitar dejar sillas vacías innecesariamente.
+
+# 📖 Guía de Consumo de API – Sistema de Reservas Inteligente
+
+Este documento explica cómo interactuar con el backend del sistema de reservas para restaurante. Cubre el ciclo de vida de una reserva, la gestión de clientes sin reserva (walk-ins), y el uso del modelo de optimización. Al correr el docker, automáticamente se correa una seed que pobla las tablas con información base que permita desarrollar los flujos sin necesidad de crear rooms, mesas o staff manualmente (que bien puede hacerse consumiendo los endpoints correspondientes).
+
+---
+
+## 🧾 1. Ciclo de Vida de una Reserva
+
+### 🔐 Autenticación
+
+**POST** `/auth/login`**form-data:**
+
+- `username`: *waiter@resto.com* | *admin@resto.com*
+- `password`: *waiter123 | admin123*
+
+**Respuesta:**
+
+```json
+{ "access_token": "JWT_TOKEN", "token_type": "bearer" }
+```
+
+---
+
+### 📅 Crear una reserva
+
+**POST** `/reservations/`
+**Headers:** `Authorization: Bearer <JWT_TOKEN>`
+
+#### Para ≤ 6 invitados:
+
+```json
+{
+  "date": "2025-07-01",
+  "time": "19:45",
+  "guests": 4,
+  "notification_email": "cliente@ejemplo.com",
+  "notes": "Mesa cerca de la ventana"
+}
+```
+
+#### Para > 6 invitados:
+
+1. Consultar disponibilidad:
+   **GET** `/tables/available-by-room?date=2025-07-01&time=19:00&guests=8`
+2. Usar `table_id` devuelto:
+
+```json
+{
+  "table_id": 6,
+  "date": "2025-07-01",
+  "time": "19:15",
+  "guests": 8,
+  "notification_email": "cliente@ejemplo.com"
+}
+```
+
+---
+
+### 📋 Listar reservas
+
+**GET** `/reservations/`
+**Header:** `Authorization: Bearer JWT_TOKEN`
+
+---
+
+## 🧍 2. Walk-in (Cliente sin reserva)
+
+### Ocupar una mesa manualmente
+
+**POST** `/tables/{table_id}/occupy`
+**Header:** `Authorization: Bearer JWT_TOKEN`
+
+### Liberar una mesa
+
+**POST** `/tables/{table_id}/free`
+
+---
+
+## 🔁 3. Gestión de Reserva
+
+### Llegada del cliente
+
+**POST** `/reservations/{reservation_id}/arrive`
+
+### Finalizar reserva
+
+**POST** `/reservations/{reservation_id}/finish`
+
+---
+
+## 🤖 4. Optimización de Reservas
+
+### Añadir reserva al pool
+
+**POST** `/reservation-pool/`
+
+```json
+{
+  "date": "2025-07-01",
+  "time": "19:00",
+  "guests": 10,
+  "notification_email": "grupo1@resto.com"
+}
+```
+
+### Ejecutar asignación inteligente
+
+**POST** `/optimize/?date=2025-07-01&time=19:00`
+
+**Respuesta:**
+
+```json
+{
+  "assigned": [
+    { "reservation_id": 18, "table_id": 6, "guests": 4, "capacity": 4 }
+  ],
+  "unassigned": [
+    { "reservation_id": 19, "table_id": null, "guests": 10, "capacity": null }
+  ]
+}
+```
+
+---
+
+## 🧭 Estado actual de mesas
+
+**GET** `/tables/`
+**Header:** `Authorization: Bearer JWT_TOKEN`
+
+---
+
+## 📬 Notificación por correo
+
+Si una reserva contiene el campo `notification_email`, el sistema envía una confirmación a través de SendGrid.
+
+---
